@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Study Tracker</title>
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/education.png">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons & Chart.js -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      height: 4px;
+      width: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .dark .custom-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200 pb-20 md:pb-6">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+        <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-tight">StudyTracker</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400" id="headerDate">Today</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="themeToggle" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+        <i data-lucide="sun" id="sunIcon" class="w-5 h-5 hidden"></i>
+        <i data-lucide="moon" id="moonIcon" class="w-5 h-5"></i>
+      </button>
+      <button id="resetDataBtn" title="Reset to Demo Data" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition">
+        <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 space-y-6">
+
+    <!-- KPI CARDS OVERVIEW -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <!-- Habit Completion -->
+      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Habits Today</span>
+        <div class="flex items-baseline justify-between mt-2">
+          <span class="text-2xl font-bold" id="kpiHabitPercent">0%</span>
+          <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500"></i>
+        </div>
+        <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+          <div id="kpiHabitBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Study Time Today -->
+      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Study Time Today</span>
+        <div class="flex items-baseline justify-between mt-2">
+          <span class="text-2xl font-bold" id="kpiTodayHours">0h 0m</span>
+          <i data-lucide="clock" class="w-5 h-5 text-indigo-500"></i>
+        </div>
+        <span class="text-[11px] text-slate-400 mt-2" id="kpiSessionCount">0 sessions</span>
+      </div>
+
+      <!-- Current Streak -->
+      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Best Habit Streak</span>
+        <div class="flex items-baseline justify-between mt-2">
+          <span class="text-2xl font-bold" id="kpiBestStreak">0 <span class="text-xs font-normal text-slate-400">days</span></span>
+          <i data-lucide="flame" class="w-5 h-5 text-amber-500"></i>
+        </div>
+        <span class="text-[11px] text-amber-500 font-medium mt-2">Keep it rolling!</span>
+      </div>
+
+      <!-- Weekly Total -->
+      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">7-Day Study Time</span>
+        <div class="flex items-baseline justify-between mt-2">
+          <span class="text-2xl font-bold" id="kpiWeekHours">0.0h</span>
+          <i data-lucide="bar-chart-2" class="w-5 h-5 text-violet-500"></i>
+        </div>
+        <span class="text-[11px] text-slate-400 mt-2">Last 7 calendar days</span>
+      </div>
+    </section>
+
+    <!-- TAB VIEWS WRAPPER -->
+
+    <!-- TAB 1: HABITS VIEW -->
+    <div id="viewHabits" class="tab-view space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white">Habit Matrix</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Track consistency across this week</p>
+        </div>
+        <button id="openHabitModalBtn" class="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-xl shadow-sm transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> New Habit
+        </button>
+      </div>
+
+      <!-- Habit Grid Table Card -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto custom-scroll">
+          <table class="w-full text-left text-sm border-collapse min-w-[500px]">
+            <thead>
+              <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 text-xs font-medium text-slate-500 dark:text-slate-400">
+                <th class="py-3 px-4 w-44">Habit Name</th>
+                <th class="py-3 px-1 text-center w-10">M</th>
+                <th class="py-3 px-1 text-center w-10">T</th>
+                <th class="py-3 px-1 text-center w-10">W</th>
+                <th class="py-3 px-1 text-center w-10">T</th>
+                <th class="py-3 px-1 text-center w-10">F</th>
+                <th class="py-3 px-1 text-center w-10">S</th>
+                <th class="py-3 px-1 text-center w-10">S</th>
+                <th class="py-3 px-2 text-center w-16">Streak</th>
+                <th class="py-3 px-3 text-right w-12"></th>
+              </tr>
+            </thead>
+            <tbody id="habitsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: POMODORO TIMER VIEW -->
+    <div id="viewFocus" class="tab-view hidden space-y-4">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm flex flex-col items-center text-center">
+        <!-- Mode Switcher -->
+        <div class="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-6">
+          <button data-mode="pomodoro" class="pomo-mode-btn px-4 py-1.5 rounded-xl text-xs font-medium transition text-white bg-indigo-600 shadow-sm">Focus (25m)</button>
+          <button data-mode="shortBreak" class="pomo-mode-btn px-4 py-1.5 rounded-xl text-xs font-medium transition text-slate-600 dark:text-slate-300">Short Break (5m)</button>
+          <button data-mode="longBreak" class="pomo-mode-btn px-4 py-1.5 rounded-xl text-xs font-medium transition text-slate-600 dark:text-slate-300">Long Break (15m)</button>
+        </div>
+
+        <!-- Subject Tag Selector -->
+        <div class="mb-6 flex items-center gap-2">
+          <span class="text-xs text-slate-400">Tag Subject:</span>
+          <select id="timerSubjectSelect" class="bg-slate-100 dark:bg-slate-800 text-xs font-medium rounded-xl px-3 py-1.5 border border-slate-200 dark:border-slate-700 outline-none text-slate-700 dark:text-slate-200">
+            <option value="DSA & Python">DSA & Python</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Machine Learning">Machine Learning</option>
+            <option value="General Reading">General Reading</option>
+          </select>
+        </div>
+
+        <!-- Timer Circle -->
+        <div class="relative w-56 h-56 flex items-center justify-center my-2">
+          <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" class="text-slate-100 dark:text-slate-800 stroke-current" stroke-width="7" fill="transparent"></circle>
+            <circle id="timerProgressRing" cx="50" cy="50" r="44" class="text-indigo-600 stroke-current transition-all duration-300 ease-linear" stroke-width="7" stroke-dasharray="276.46" stroke-dashoffset="0" stroke-linecap="round" fill="transparent"></circle>
+          </svg>
+          <div class="absolute flex flex-col items-center">
+            <span id="timerDisplay" class="text-5xl font-black tracking-tight text-slate-900 dark:text-white tabular-nums">25:00</span>
+            <span id="timerLabel" class="text-xs uppercase tracking-widest text-slate-400 mt-1 font-semibold">Stay Focused</span>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-4 mt-6">
+          <button id="timerToggleBtn" class="w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 transition active:scale-95">
+            <i data-lucide="play" id="timerPlayIcon" class="w-6 h-6 ml-0.5"></i>
+            <i data-lucide="pause" id="timerPauseIcon" class="w-6 h-6 hidden"></i>
+          </button>
+          <button id="timerResetBtn" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: LOGS & SESSIONS VIEW -->
+    <div id="viewLogs" class="tab-view hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white">Study Sessions</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Manual log entry and history</p>
+        </div>
+        <button id="openLogModalBtn" class="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-xl shadow-sm transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> Log Session
+        </button>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="flex gap-2 items-center overflow-x-auto pb-1" id="subjectFilterContainer">
+        <button data-filter="all" class="log-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-indigo-600 text-white">All</button>
+      </div>
+
+      <!-- Session List Card -->
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-2 divide-y divide-slate-100 dark:divide-slate-800" id="studyLogsList">
+        <!-- Rendered items -->
+      </div>
+    </div>
+
+    <!-- TAB 4: ANALYTICS VIEW -->
+    <div id="viewAnalytics" class="tab-view hidden space-y-4">
+      <div>
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white">Weekly Analytics</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Time distribution across subjects</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Subject Doughnut -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-sm flex flex-col items-center">
+          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 self-start">Subject Breakdown</span>
+          <div class="w-full max-w-[240px] h-[220px]">
+            <canvas id="subjectDoughnutChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 7-Day Trend Bar Chart -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 shadow-sm flex flex-col">
+          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">7-Day Study Hours</span>
+          <div class="w-full h-[220px]">
+            <canvas id="dailyTrendBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION (MOBILE APPLIKE) -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 px-6 py-2 flex justify-around items-center max-w-md mx-auto md:max-w-xl md:rounded-2xl md:bottom-4 md:shadow-xl md:border">
+    <button data-tab="viewHabits" class="nav-tab-btn flex flex-col items-center gap-1 text-indigo-600 dark:text-indigo-400">
+      <i data-lucide="check-square" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Habits</span>
+    </button>
+    <button data-tab="viewFocus" class="nav-tab-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+      <i data-lucide="timer" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Focus</span>
+    </button>
+    <button data-tab="viewLogs" class="nav-tab-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+      <i data-lucide="book-open" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Logs</span>
+    </button>
+    <button data-tab="viewAnalytics" class="nav-tab-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+      <i data-lucide="pie-chart" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Charts</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: ADD HABIT -->
+  <div id="habitModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl">
+      <h3 class="text-base font-bold text-slate-900 dark:text-white mb-4">Add Daily Habit</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Habit Title</label>
+          <input type="text" id="habitInputTitle" placeholder="e.g. Read 15 pages, Solve 2 LeetCode" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-600">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Category / Tag</label>
+          <input type="text" id="habitInputTag" placeholder="e.g. Study, Fitness, Coding" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-600">
+        </div>
+      </div>
+      <div class="flex gap-2 mt-6">
+        <button id="cancelHabitModalBtn" class="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl">Cancel</button>
+        <button id="saveHabitBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl shadow">Save Habit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD STUDY LOG -->
+  <div id="logModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl">
+      <h3 class="text-base font-bold text-slate-900 dark:text-white mb-4">Log Study Session</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Subject</label>
+          <input type="text" id="logInputSubject" placeholder="e.g. Machine Learning" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-600">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Duration (Minutes)</label>
+          <input type="number" id="logInputMinutes" min="5" step="5" placeholder="45" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-600">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">Key Topics Covered</label>
+          <input type="text" id="logInputNotes" placeholder="e.g. Gradient Descent derivations" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-600">
+        </div>
+      </div>
+      <div class="flex gap-2 mt-6">
+        <button id="cancelLogModalBtn" class="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl">Cancel</button>
+        <button id="saveLogBtn" class="flex-1 px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl shadow">Save Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION JAVASCRIPT LOGIC -->
+  <script>
+    // --- STATE INITIALIZATION & STORAGE ---
+    const STORAGE_KEY_HABITS = 'studytracker_habits_v1';
+    const STORAGE_KEY_LOGS = 'studytracker_logs_v1';
+    const STORAGE_KEY_THEME = 'studytracker_theme_v1';
+
+    const defaultHabits = [
+      { id: 'h1', title: 'Code Algorithms', tag: 'Coding', completed: [true, true, true, false, false, false, false], streak: 3 },
+      { id: 'h2', title: 'Revise ML Lecture Notes', tag: 'Academics', completed: [true, true, false, false, false, false, false], streak: 2 },
+      { id: 'h3', title: 'Read Tech Documentation', tag: 'Reading', completed: [true, false, true, false, false, false, false], streak: 1 },
+      { id: 'h4', title: 'Workout / Badminton', tag: 'Health', completed: [true, true, true, false, false, false, false], streak: 3 }
+    ];
+
+    const defaultLogs = [
+      { id: 'l1', subject: 'DSA & Python', minutes: 60, timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), notes: 'Graph algorithms & DFS traversal' },
+      { id: 'l2', subject: 'Machine Learning', minutes: 45, timestamp: new Date(Date.now() - 3600000 * 5).toISOString(), notes: 'Loss functions and backprop math' },
+      { id: 'l3', subject: 'Mathematics', minutes: 50, timestamp: new Date(Date.now() - 86400000).toISOString(), notes: 'Linear algebra projections' }
+    ];
+
+    let habits = JSON.parse(localStorage.getItem(STORAGE_KEY_HABITS)) || defaultHabits;
+    let logs = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGS)) || defaultLogs;
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY_HABITS, JSON.stringify(habits));
+      localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logs));
+      renderKPIs();
+      renderHabitsTable();
+      renderLogsList();
+      updateCharts();
+    }
+
+    // --- DARK / LIGHT THEME ---
+    const themeToggle = document.getElementById('themeToggle');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    function applyTheme(isDark) {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+      } else {
+        document.documentElement.classList.remove('dark');
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+      }
+      localStorage.setItem(STORAGE_KEY_THEME, isDark ? 'dark' : 'light');
+    }
+
+    const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
+    if (savedTheme) {
+      applyTheme(savedTheme === 'dark');
+    } else {
+      applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+
+    themeToggle.addEventListener('click', () => {
+      applyTheme(!document.documentElement.classList.contains('dark'));
+    });
+
+    // --- TAB SWITCHING ---
+    const tabButtons = document.querySelectorAll('.nav-tab-btn');
+    const tabViews = document.querySelectorAll('.tab-view');
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetTab = btn.getAttribute('data-tab');
+        tabViews.forEach(v => v.classList.add('hidden'));
+        document.getElementById(targetTab).classList.remove('hidden');
+
+        tabButtons.forEach(b => {
+          b.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+          b.classList.add('text-slate-400');
+        });
+        btn.classList.add('text-indigo-600', 'dark:text-indigo-400');
+        btn.classList.remove('text-slate-400');
+
+        if (targetTab === 'viewAnalytics') {
+          setTimeout(updateCharts, 50);
+        }
+      });
+    });
+
+    // --- KPI CALCULATIONS ---
+    function getTodayDayIndex() {
+      // Monday = 0, Sunday = 6
+      const d = new Date().getDay();
+      return d === 0 ? 6 : d - 1;
+    }
+
+    function renderKPIs() {
+      const todayIdx = getTodayDayIndex();
+      
+      // Habits today
+      let habitDoneCount = 0;
+      habits.forEach(h => {
+        if (h.completed[todayIdx]) habitDoneCount++;
+      });
+      const habitPercent = habits.length > 0 ? Math.round((habitDoneCount / habits.length) * 100) : 0;
+      document.getElementById('kpiHabitPercent').innerText = `${habitPercent}%`;
+      document.getElementById('kpiHabitBar').style.width = `${habitPercent}%`;
+
+      // Max streak
+      let maxStreak = 0;
+      habits.forEach(h => { if (h.streak > maxStreak) maxStreak = h.streak; });
+      document.getElementById('kpiBestStreak').innerHTML = `${maxStreak} <span class="text-xs font-normal text-slate-400">days</span>`;
+
+      // Study time today & 7-day
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const sevenDaysAgo = startOfToday - (6 * 86400000);
+
+      let todayMinutes = 0;
+      let weekMinutes = 0;
+      let todaySessions = 0;
+
+      logs.forEach(l => {
+        const t = new Date(l.timestamp).getTime();
+        if (t >= startOfToday) {
+          todayMinutes += l.minutes;
+          todaySessions++;
+        }
+        if (t >= sevenDaysAgo) {
+          weekMinutes += l.minutes;
+        }
+      });
+
+      const todayHrs = Math.floor(todayMinutes / 60);
+      const todayRemMins = todayMinutes % 60;
+      document.getElementById('kpiTodayHours').innerText = `${todayHrs}h ${todayRemMins}m`;
+      document.getElementById('kpiSessionCount').innerText = `${todaySessions} session${todaySessions === 1 ? '' : 's'}`;
+      document.getElementById('kpiWeekHours').innerText = `${(weekMinutes / 60).toFixed(1)}h`;
+    }
+
+    // --- HABITS TABLE ---
+    const habitsTableBody = document.getElementById('habitsTableBody');
+    function renderHabitsTable() {
+      habitsTableBody.innerHTML = '';
+      const todayIdx = getTodayDayIndex();
+
+      habits.forEach((h, hIdx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition";
+
+        // Day cells
+        let daysHtml = '';
+        h.completed.forEach((done, dIdx) => {
+          const isToday = dIdx === todayIdx;
+          daysHtml += `
+            <td class="py-2.5 px-1 text-center">
+              <button onclick="toggleHabitDay(${hIdx}, ${dIdx})" class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition ${
+                done 
+                  ? 'bg-emerald-500 text-white shadow-sm' 
+                  : (isToday ? 'border-2 border-indigo-400 dark:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 text-transparent' : 'border border-slate-200 dark:border-slate-700 text-transparent hover:border-slate-300')
+              }">
+                <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+              </button>
+            </td>
+          `;
+        });
+
+        tr.innerHTML = `
+          <td class="py-3 px-4">
+            <div class="font-medium text-slate-800 dark:text-slate-100">${escapeHtml(h.title)}</div>
+            <div class="text-[11px] text-slate-400">${escapeHtml(h.tag || 'General')}</div>
+          </td>
+          ${daysHtml}
+          <td class="py-3 px-2 text-center">
+            <span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-500 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">
+              <i data-lucide="flame" class="w-3 h-3"></i> ${h.streak}d
+            </span>
+          </td>
+          <td class="py-3 px-3 text-right">
+            <button onclick="deleteHabit(${hIdx})" class="p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </td>
+        `;
+        habitsTableBody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    window.toggleHabitDay = function(hIdx, dayIdx) {
+      habits[hIdx].completed[dayIdx] = !habits[hIdx].completed[dayIdx];
+      // Recalculate streak
+      let currentStreak = 0;
+      for (let i = dayIdx; i >= 0; i--) {
+        if (habits[hIdx].completed[i]) currentStreak++;
+        else break;
+      }
+      habits[hIdx].streak = currentStreak;
+      saveState();
+    };
+
+    window.deleteHabit = function(hIdx) {
+      if (confirm('Delete this habit?')) {
+        habits.splice(hIdx, 1);
+        saveState();
+      }
+    };
+
+    // --- HABIT MODAL ---
+    const habitModal = document.getElementById('habitModal');
+    document.getElementById('openHabitModalBtn').addEventListener('click', () => {
+      document.getElementById('habitInputTitle').value = '';
+      document.getElementById('habitInputTag').value = '';
+      habitModal.classList.remove('hidden');
+      habitModal.classList.add('flex');
+    });
+
+    document.getElementById('cancelHabitModalBtn').addEventListener('click', () => {
+      habitModal.classList.add('hidden');
+      habitModal.classList.remove('flex');
+    });
+
+    document.getElementById('saveHabitBtn').addEventListener('click', () => {
+      const title = document.getElementById('habitInputTitle').value.trim();
+      const tag = document.getElementById('habitInputTag').value.trim() || 'General';
+      if (!title) return alert('Please enter a habit title.');
+
+      habits.push({
+        id: 'h_' + Date.now(),
+        title,
+        tag,
+        completed: [false, false, false, false, false, false, false],
+        streak: 0
+      });
+      saveState();
+      habitModal.classList.add('hidden');
+      habitModal.classList.remove('flex');
+    });
+
+    // --- POMODORO TIMER & WEB AUDIO ---
+    let timerDuration = 25 * 60;
+    let timerTimeLeft = timerDuration;
+    let timerInterval = null;
+    let timerRunning = false;
+    let currentMode = 'pomodoro';
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerProgressRing = document.getElementById('timerProgressRing');
+    const timerToggleBtn = document.getElementById('timerToggleBtn');
+    const timerPlayIcon = document.getElementById('timerPlayIcon');
+    const timerPauseIcon = document.getElementById('timerPauseIcon');
+    const timerResetBtn = document.getElementById('timerResetBtn');
+    const circumference = 2 * Math.PI * 44; // r=44
+
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+      } catch (e) {
+        console.warn('AudioContext not allowed without prior interaction', e);
+      }
+    }
+
+    function updateTimerUI() {
+      const minutes = Math.floor(timerTimeLeft / 60);
+      const seconds = timerTimeLeft % 60;
+      timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      const offset = circumference - (timerTimeLeft / timerDuration) * circumference;
+      timerProgressRing.style.strokeDashoffset = offset;
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      if (mode === 'pomodoro') timerDuration = 25 * 60;
+      else if (mode === 'shortBreak') timerDuration = 5 * 60;
+      else if (mode === 'longBreak') timerDuration = 15 * 60;
+
+      timerTimeLeft = timerDuration;
+      pauseTimer();
+      updateTimerUI();
+
+      document.querySelectorAll('.pomo-mode-btn').forEach(btn => {
+        if (btn.getAttribute('data-mode') === mode) {
+          btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+          btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+        } else {
+          btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+          btn.classList.add('text-slate-600', 'dark:text-slate-300');
+        }
+      });
+    }
+
+    document.querySelectorAll('.pomo-mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.getAttribute('data-mode')));
+    });
+
+    function startTimer() {
+      timerRunning = true;
+      timerPlayIcon.classList.add('hidden');
+      timerPauseIcon.classList.remove('hidden');
+      timerInterval = setInterval(() => {
+        if (timerTimeLeft > 0) {
+          timerTimeLeft--;
+          updateTimerUI();
+        } else {
+          pauseTimer();
+          playBeep();
+          if (currentMode === 'pomodoro') {
+            const subject = document.getElementById('timerSubjectSelect').value;
+            logs.unshift({
+              id: 'l_' + Date.now(),
+              subject,
+              minutes: 25,
+              timestamp: new Date().toISOString(),
+              notes: 'Completed Pomodoro session'
+            });
+            saveState();
+            alert('Great focus session completed! 25 minutes logged under ' + subject);
+          } else {
+            alert('Break ended! Ready to focus again?');
+          }
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      timerPlayIcon.classList.remove('hidden');
+      timerPauseIcon.classList.add('hidden');
+    }
+
+    timerToggleBtn.addEventListener('click', () => {
+      if (timerRunning) pauseTimer();
+      else startTimer();
+    });
+
+    timerResetBtn.addEventListener('click', () => {
+      pauseTimer();
+      timerTimeLeft = timerDuration;
+      updateTimerUI();
+    });
+
+    // --- STUDY LOGS & FILTERING ---
+    let currentFilter = 'all';
+    const studyLogsList = document.getElementById('studyLogsList');
+    const filterContainer = document.getElementById('subjectFilterContainer');
+
+    function renderFilterButtons() {
+      const subjects = Array.from(new Set(logs.map(l => l.subject)));
+      filterContainer.innerHTML = `
+        <button data-filter="all" class="log-filter-btn px-3 py-1 rounded-lg text-xs font-medium ${currentFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">All</button>
+      `;
+      subjects.forEach(s => {
+        filterContainer.innerHTML += `
+          <button data-filter="${escapeHtml(s)}" class="log-filter-btn px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${currentFilter === s ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">${escapeHtml(s)}</button>
+        `;
+      });
+
+      document.querySelectorAll('.log-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.getAttribute('data-filter');
+          renderFilterButtons();
+          renderLogsList();
+        });
+      });
+    }
+
+    function renderLogsList() {
+      studyLogsList.innerHTML = '';
+      const filtered = currentFilter === 'all' ? logs : logs.filter(l => l.subject === currentFilter);
+
+      if (filtered.length === 0) {
+        studyLogsList.innerHTML = `<div class="py-8 text-center text-xs text-slate-400">No study sessions logged yet.</div>`;
+        return;
+      }
+
+      filtered.forEach((l, idx) => {
+        const dateObj = new Date(l.timestamp);
+        const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+        const div = document.createElement('div');
+        div.className = "py-3 px-3 flex items-center justify-between";
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs">
+              ${l.minutes}m
+            </div>
+            <div>
+              <div class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(l.subject)}</div>
+              <div class="text-xs text-slate-400">${escapeHtml(l.notes || 'No description')}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-400">${dateStr}, ${timeStr}</span>
+            <button onclick="deleteLog('${l.id}')" class="p-1 text-slate-300 hover:text-rose-500 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        `;
+        studyLogsList.appendChild(div);
+      });
+
+      lucide.createIcons();
+    }
+
+    window.deleteLog = function(id) {
+      if (confirm('Delete this study log entry?')) {
+        logs = logs.filter(l => l.id !== id);
+        saveState();
+        renderFilterButtons();
+      }
+    };
+
+    // --- LOG MODAL ---
+    const logModal = document.getElementById('logModal');
+    document.getElementById('openLogModalBtn').addEventListener('click', () => {
+      document.getElementById('logInputSubject').value = '';
+      document.getElementById('logInputMinutes').value = '';
+      document.getElementById('logInputNotes').value = '';
+      logModal.classList.remove('hidden');
+      logModal.classList.add('flex');
+    });
+
+    document.getElementById('cancelLogModalBtn').addEventListener('click', () => {
+      logModal.classList.add('hidden');
+      logModal.classList.remove('flex');
+    });
+
+    document.getElementById('saveLogBtn').addEventListener('click', () => {
+      const subject = document.getElementById('logInputSubject').value.trim();
+      const minutes = parseInt(document.getElementById('logInputMinutes').value, 10);
+      const notes = document.getElementById('logInputNotes').value.trim();
+
+      if (!subject || isNaN(minutes) || minutes <= 0) {
+        return alert('Please enter a valid subject and minute duration.');
+      }
+
+      logs.unshift({
+        id: 'l_' + Date.now(),
+        subject,
+        minutes,
+        timestamp: new Date().toISOString(),
+        notes
+      });
+
+      saveState();
+      renderFilterButtons();
+      logModal.classList.add('hidden');
+      logModal.classList.remove('flex');
+    });
+
+    // --- CHART.JS ANALYTICS ---
+    let doughnutChart = null;
+    let trendChart = null;
+
+    function updateCharts() {
+      // 1. Doughnut: Minutes per subject
+      const subjectMap = {};
+      logs.forEach(l => {
+        subjectMap[l.subject] = (subjectMap[l.subject] || 0) + l.minutes;
+      });
+      const doughnutLabels = Object.keys(subjectMap);
+      const doughnutData = Object.values(subjectMap);
+
+      const ctxDoughnut = document.getElementById('subjectDoughnutChart').getContext('2d');
+      if (doughnutChart) doughnutChart.destroy();
+      doughnutChart = new Chart(ctxDoughnut, {
+        type: 'doughnut',
+        data: {
+          labels: doughnutLabels,
+          datasets: [{
+            data: doughnutData,
+            backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
+          }
+        }
+      });
+
+      // 2. Bar Chart: Last 7 Days Study Hours
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const dayHours = [0, 0, 0, 0, 0, 0, 0];
+      const now = new Date();
+
+      logs.forEach(l => {
+        const dt = new Date(l.timestamp);
+        const dayIdx = dt.getDay() === 0 ? 6 : dt.getDay() - 1;
+        dayHours[dayIdx] += (l.minutes / 60);
+      });
+
+      const ctxTrend = document.getElementById('dailyTrendBarChart').getContext('2d');
+      if (trendChart) trendChart.destroy();
+      trendChart = new Chart(ctxTrend, {
+        type: 'bar',
+        data: {
+          labels: days,
+          datasets: [{
+            label: 'Hours',
+            data: dayHours.map(h => parseFloat(h.toFixed(1))),
+            backgroundColor: '#4f46e5',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { display: false } },
+            x: { grid: { display: false } }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    // --- RESET DEMO DATA ---
+    document.getElementById('resetDataBtn').addEventListener('click', () => {
+      if (confirm('Reset habits and logs back to default starter data?')) {
+        habits = JSON.parse(JSON.stringify(defaultHabits));
+        logs = JSON.parse(JSON.stringify(defaultLogs));
+        saveState();
+        renderFilterButtons();
+      }
+    });
+
+    // --- HELPERS ---
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // --- INIT ---
+    document.getElementById('headerDate').innerText = new Date().toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    });
+    renderKPIs();
+    renderHabitsTable();
+    renderFilterButtons();
+    renderLogsList();
+    updateTimerUI();
+    lucide.createIcons();
+  </script>
+</body>
+</html>
